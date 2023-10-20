@@ -6,7 +6,8 @@ const orderTable = require("../model/orderModel");
 const paymentTable  = require("../model/paymentModel");
 const restaurantTable = require("../model/restaurantModel");
 const userTable = require("../model/usersModel");
-const mongoose = require("mongoose")
+const createToken = require("../middleware/jwt");
+const auth = require("../middleware/auth");
 //userTable
 const user = async(req,res)=>{
     try{
@@ -18,9 +19,9 @@ const user = async(req,res)=>{
     const newUser = await userTable.create({
        firstName,lastName,email,mobile,otp,ip_Address
       });
-    res.status(200).json({message:"user create ok!!", newUser})
-    }
-    catch(error){
+      const token = createToken.generateToken(newUser._id)
+      res.status(200).json({message:"user create ok!!", newUser, token });
+    }catch(error){
         console.log('error',error);
         res.status(500).json({message:"internal server error"})
     }
@@ -53,10 +54,12 @@ const address = async(req,res)=>{
         city,
         state,
         pinCode,
-        country
+        country,
+        is_Active,
     }=req.body;
+    const userid = req.user.userId;
     const address = await addressTable.create({
-        street,city,state,pinCode,country,is_Active
+        street,city,state,pinCode,country,is_Active,userid
     })
     res.status(200).json({message:"address create ok!!!", address})
     }catch(error){
@@ -130,4 +133,16 @@ const order = async(req,res)=>{
     }
 }
 
-module.exports = {user, admin, address, menuitam, restaurant, payment, delivery, order};
+const getAddress = async (req, res) => {
+    try {
+      const userId = req.user.userId;
+      console.log(userId, "get")
+      const addresses = await addressTable.findOne({ userid: userId });
+      res.status(200).json({ message: "User addresses retrieved successfully", addresses });
+    } catch (error) {
+      console.error('Error', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  };
+
+module.exports = {user, admin, address, menuitam, restaurant, payment, delivery, order, getAddress};
